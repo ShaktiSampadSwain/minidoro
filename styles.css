@@ -1,12 +1,12 @@
 /* Container for our timer icon and its pop-up panel */
-.pomodoro-container {
+.minidoro-container {
   position: relative;
   margin-right: 6px;
 }
 
 /* Session complete animation - minimal circle pulse only */
 /* Applies to the SVG element to scale it up and down */
-.pomodoro-container.session-complete svg {
+.minidoro-container.session-complete svg {
   animation: minimalCirclePulse 1s ease-in-out infinite;
 }
 
@@ -21,7 +21,7 @@
 }
 
 /* The main icon button - completely flat and transparent */
-.pomodoro-pie-button {
+.minidoro-pie-button {
   background-color: transparent !important;
   display: flex;
   align-items: center;
@@ -37,12 +37,12 @@
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.pomodoro-pie-button:hover {
+.minidoro-pie-button:hover {
   opacity: 1;
   background-color: var(--background-modifier-hover) !important;
 }
 
-.pomodoro-pie-chart {
+.minidoro-pie-chart {
   width: 20px;
   height: 20px;
   /* Removed rotation from here to decouple it from container animations */
@@ -54,40 +54,40 @@
 /* Apply rotation to the CIRCLES instead of the SVG container. 
    This ensures the "Top" (0 degree/12 o'clock) start position is 
    intrinsic to the geometry and won't be overridden by container animations. */
-.pomodian-progress-track,
-.pomodian-progress-circle {
+.minidoro-progress-track,
+.minidoro-progress-circle {
   transform: rotate(-90deg);
   transform-origin: 50% 50%; /* Ensure they rotate around the center */
 }
 
-.pomodian-progress-track {
+.minidoro-progress-track {
   stroke: transparent;
 }
 
-.pomodian-progress-circle {
+.minidoro-progress-circle {
   transition: stroke-dashoffset 0.3s linear, stroke 0.3s ease;
   stroke-linecap: round;
   stroke-dasharray: var(--circumference, 50.27) var(--circumference, 50.27);
   stroke-dashoffset: calc(var(--circumference, 50.27) * (1 - var(--progress, 1)));
 }
 
-.pomodian-progress-circle.pomodian-work-mode {
+.minidoro-progress-circle.minidoro-work-mode {
   stroke: var(--interactive-accent);
 }
 
-.pomodian-progress-circle.pomodian-break-mode {
+.minidoro-progress-circle.minidoro-break-mode {
   stroke: #808080;
 }
 
-.pomodian-progress-circle.pomodian-progress-idle {
+.minidoro-progress-circle.minidoro-progress-idle {
   stroke-dashoffset: 0;
 }
 
-.pomodian-progress-circle.pomodian-progress-complete {
+.minidoro-progress-circle.minidoro-progress-complete {
   stroke-dashoffset: var(--circumference, 50.27);
 }
 
-.pomodoro-control-panel {
+.minidoro-control-panel {
   position: absolute;
   top: 100%;
   left: 50%;
@@ -108,11 +108,11 @@
   pointer-events: auto;
 }
 
-.pomodoro-control-panel.is-panel-visible {
+.minidoro-control-panel.is-panel-visible {
     display: flex;
 }
 
-.pomodoro-panel-mode {
+.minidoro-panel-mode {
   font-size: var(--font-ui-small);
   font-weight: 500;
   cursor: pointer;
@@ -121,30 +121,30 @@
   transition: background-color 0.2s ease, opacity 0.2s ease, cursor 0.2s ease;
 }
 
-.pomodoro-panel-mode:hover {
+.minidoro-panel-mode:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.pomodoro-panel-mode.pomodian-work-mode {
+.minidoro-panel-mode.minidoro-work-mode {
   color: var(--interactive-accent);
 }
 
-.pomodoro-panel-mode.pomodian-break-mode {
+.minidoro-panel-mode.minidoro-break-mode {
   color: #808080;
 }
 
-.pomodoro-panel-mode.mode-enabled {
+.minidoro-panel-mode.mode-enabled {
   opacity: 1;
   cursor: pointer;
 }
 
-.pomodoro-panel-mode.mode-disabled {
+.minidoro-panel-mode.mode-disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.pomodoro-panel-time {
+.minidoro-panel-time {
   font-family: var(--font-monospace, monospace);
   font-size: 20px;
   font-weight: 600;
@@ -158,32 +158,32 @@
   min-width: 80px;
 }
 
-.pomodoro-panel-time:hover {
+.minidoro-panel-time:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.pomodoro-panel-time:active {
+.minidoro-panel-time:active {
   transform: scale(0.98);
 }
 
-.pomodoro-pie-button:focus-visible,
-.pomodoro-panel-mode:focus-visible,
-.pomodoro-panel-time:focus-visible {
+.minidoro-pie-button:focus-visible,
+.minidoro-panel-mode:focus-visible,
+.minidoro-panel-time:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
 
 @media (prefers-contrast: high) {
   /* Adjusted for thicker base stroke (+1px from base) */
-  .pomodian-progress-circle {
+  .minidoro-progress-circle {
     stroke-width: 5;
   }
   
-  .pomodoro-container.session-complete .pomodian-progress-circle {
+  .minidoro-container.session-complete .minidoro-progress-circle {
     stroke-width: 6;
   }
   
-  .pomodoro-control-panel {
+  .minidoro-control-panel {
     border-width: 2px;
   }
 }

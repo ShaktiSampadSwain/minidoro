@@ -1,6 +1,6 @@
-# Pomodian: A Pomodoro Timer for Obsidian
+# Minidoro: A Pomodoro Timer for Obsidian
 
-Pomodian is a simple, unobtrusive Pomodoro timer to help you focus. **Pomodian** integrates directly into your workspace, providing a visual timer in the header and customizable settings to fit your workflow.
+Minidoro is a simple, unobtrusive Pomodoro timer to help you focus. **Minidoro** integrates directly into your workspace, providing a visual timer in the header and customizable settings to fit your workflow.
 
 ---
 
@@ -56,7 +56,7 @@ If you find this plugin helpful, please consider supporting its development.
 2.  Go to the **Community plugins** tab.
 3.  Make sure "**Restricted mode**" is off.
 4.  Click **Browse** to open the community plugins browser.
-5.  Search for "**Pomodian**" and click **Install**.
+5.  Search for "**Minidoro**" and click **Install**.
 6.  Once installed, click **Enable** to activate the plugin.
 
 ---
