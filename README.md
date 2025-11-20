@@ -1,6 +1,6 @@
 # Pomodian: A Pomodoro Timer for Obsidian
 
-A simple, unobtrusive Pomodoro timer for Obsidian to help you stay focused and productive. **Pomodian** integrates directly into your workspace, providing a visual timer in the header and customizable settings to fit your workflow.
+Pomodian is a simple, unobtrusive Pomodoro timer to help you focus. **Pomodian** integrates directly into your workspace, providing a visual timer in the header and customizable settings to fit your workflow.
 
 ---
 

@@ -1,7 +1,7 @@
 {
 	"name": "pomodian",
 	"version": "1.0.9",
-	"description": "A Minimal Pomodoro timer plugin to help you focus.",
+	"description": "A minimal Pomodoro timer to help you focus.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

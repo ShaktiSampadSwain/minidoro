@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, Notice, WorkspaceLeaf, addIcon, setIcon } from 'obsidian';
 import { PomoTimer, TimerState, PomodoroSettings, DEFAULT_SETTINGS } from './PomoTimer';
 
 export default class PomodoroPlugin extends Plugin {
@@ -20,7 +20,18 @@ export default class PomodoroPlugin extends Plugin {
 
     async onload() {
         await this.loadSettings();
+
+        // Register the custom timer icon (SVG structure)
+        // Updated stroke-width to 4 for thicker circle
+        addIcon('pomodian-timer', `
+            <svg viewBox="0 0 20 20" class="pomodoro-pie-chart">
+                <circle class="pomodian-progress-track" cx="10" cy="10" r="8" fill="transparent" stroke-width="4"></circle>
+                <circle class="pomodian-progress-circle" cx="10" cy="10" r="8" fill="transparent" stroke-width="4"></circle>
+            </svg>
+        `);
+
         this.timer = new PomoTimer(
+            this, // Pass plugin instance for registerInterval
             this.settings,
             (remaining, total) => this.updateUI(remaining, total),
             (state) => this.onTimerCompletion(state),
@@ -32,7 +43,7 @@ export default class PomodoroPlugin extends Plugin {
         // Register commands for keyboard shortcuts
         this.addCommand({
             id: 'start-pause-timer',
-            name: 'Start/Pause timer',
+            name: 'Start/pause timer',
             callback: () => {
                 this.handlePauseResumeClick();
             }
@@ -48,18 +59,24 @@ export default class PomodoroPlugin extends Plugin {
 
         this.addCommand({
             id: 'switch-mode',
-            name: 'Switch timer mode',
+            name: 'Switch mode',
             callback: () => {
                 this.handleCycleModeClick();
             }
         });
 
-        this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.refreshHeaderButton()));
+        // Register active leaf change event
+        this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => this.refreshHeaderButton(leaf)));
         this.app.workspace.onLayoutReady(() => this.refreshHeaderButton());
+
+        // Register DOM event for document click to ensure cleanup
+        this.registerDomEvent(document, 'click', (event: MouseEvent) => {
+            this.handleDocumentClick(event);
+        });
 
         // Request notification permission on startup
         if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
+            void Notification.requestPermission().catch(err => console.error("Pomodian: Error requesting notification permission", err));
         }
     }
 
@@ -84,12 +101,19 @@ export default class PomodoroPlugin extends Plugin {
         this.updateUI(0, 0); 
     }
 
-    private refreshHeaderButton() {
+    private refreshHeaderButton(leaf: WorkspaceLeaf | null = null) {
         this.removeHeaderButton();
+        
+        // Fixed: activeLeaf is deprecated. Use getLeaf(false) to get the most recent leaf.
+        const targetLeaf = leaf || this.app.workspace.getLeaf(false);
+        
+        if (!targetLeaf) return;
+
         setTimeout(() => {
-            const activeLeaf = this.app.workspace.activeLeaf;
-            if (!activeLeaf) return;
-            const actionsContainer = activeLeaf.view.containerEl.querySelector('.view-actions');
+            // Check if view exists on the leaf
+            if (!targetLeaf.view) return;
+            
+            const actionsContainer = targetLeaf.view.containerEl.querySelector('.view-actions');
             if (actionsContainer && !actionsContainer.querySelector('.pomodoro-container')) {
                 this.createHeaderButton(actionsContainer);
                 this.updateUI(0, 0);
@@ -100,10 +124,9 @@ export default class PomodoroPlugin extends Plugin {
     private createHeaderButton(parent: Element) {
         this.containerEl = parent.createEl('div', { cls: 'pomodoro-container' });
 
-        // Event Listeners for Hover and Click - improved interaction
+        // Event Listeners for Hover
         this.containerEl.addEventListener('mouseenter', this.showPanel);
         this.containerEl.addEventListener('mouseleave', this.hidePanel);
-        document.addEventListener('click', this.handleDocumentClick, true);
 
         const pieButton = this.containerEl.createEl('button', { cls: 'pomodoro-pie-button' });
         pieButton.setAttribute('aria-label', 'Pomodoro timer');
@@ -116,30 +139,13 @@ export default class PomodoroPlugin extends Plugin {
             }
         };
         
-        // SVG Creation
-        const svgNS = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(svgNS, 'svg');
-        svg.setAttribute('class', 'pomodoro-pie-chart');
-        svg.setAttribute('viewBox', '0 0 20 20');
+        // SVG Creation using setIcon
+        // We use the custom icon registered in onload
+        setIcon(pieButton, 'pomodian-timer');
 
-        const track = document.createElementNS(svgNS, 'circle');
-        track.setAttribute('class', 'progress-ring__track');
-        track.setAttribute('r', '8'); 
-        track.setAttribute('cx', '10'); 
-        track.setAttribute('cy', '10');
-        track.setAttribute('fill', 'transparent'); 
-        track.setAttribute('stroke-width', '3');
-
-        this.pieCircleEl = document.createElementNS(svgNS, 'circle');
-        this.pieCircleEl.setAttribute('class', 'progress-ring__circle');
-        this.pieCircleEl.setAttribute('r', '8'); 
-        this.pieCircleEl.setAttribute('cx', '10'); 
-        this.pieCircleEl.setAttribute('cy', '10');
-        this.pieCircleEl.setAttribute('fill', 'transparent'); 
-        this.pieCircleEl.setAttribute('stroke-width', '3');
+        // Retrieve the reference to the dynamic circle element so we can animate it
+        this.pieCircleEl = pieButton.querySelector('.pomodian-progress-circle');
         
-        svg.append(track, this.pieCircleEl);
-        pieButton.appendChild(svg);
         parent.prepend(this.containerEl);
         
         this.createControlPanel();
@@ -160,7 +166,7 @@ export default class PomodoroPlugin extends Plugin {
         
         this.panelTimeEl = this.controlPanelEl.createEl('button', { 
             cls: 'pomodoro-panel-time', 
-            attr: { 'title': 'Left click: Play/Pause | Right click: Reset' } 
+            attr: { 'title': 'Left click: Play/pause | Right click: Reset' } 
         });
         this.panelTimeEl.onclick = () => this.handlePauseResumeClick();
         this.panelTimeEl.oncontextmenu = (e) => { 
@@ -170,8 +176,6 @@ export default class PomodoroPlugin extends Plugin {
     }
 
     private removeHeaderButton() {
-        document.removeEventListener('click', this.handleDocumentClick, true);
-        
         // Clear any pending hide timeout
         if (this.hideTimeout !== null) {
             clearTimeout(this.hideTimeout);
@@ -184,7 +188,6 @@ export default class PomodoroPlugin extends Plugin {
     }
 
     private showPanel = () => {
-        // Clear any pending hide timeout when showing panel
         if (this.hideTimeout !== null) {
             clearTimeout(this.hideTimeout);
             this.hideTimeout = null;
@@ -194,7 +197,6 @@ export default class PomodoroPlugin extends Plugin {
     
     private hidePanel = () => { 
         if (!this.isPanelPinned) {
-            // Add a 300ms grace period before hiding
             this.hideTimeout = window.setTimeout(() => {
                 this.controlPanelEl?.removeClass('is-panel-visible');
                 this.hideTimeout = null;
@@ -204,10 +206,8 @@ export default class PomodoroPlugin extends Plugin {
     
     private handleDocumentClick = (event: MouseEvent) => {
         if (this.containerEl && !this.containerEl.contains(event.target as Node)) {
-            // Clicked outside the container
             if (this.isPanelPinned) {
                 this.isPanelPinned = false;
-                // Clear any grace period and hide immediately when clicking outside
                 if (this.hideTimeout !== null) {
                     clearTimeout(this.hideTimeout);
                     this.hideTimeout = null;
@@ -223,33 +223,31 @@ export default class PomodoroPlugin extends Plugin {
         const timerState = this.timer.getState();
         
         // Remove all mode classes first
-        this.pieCircleEl.removeClass('work-mode', 'break-mode');
-        this.panelModeEl.removeClass('work-mode', 'break-mode', 'mode-enabled', 'mode-disabled');
-        this.pieCircleEl.removeClass('progress-complete', 'progress-idle');
+        this.pieCircleEl.removeClass('pomodian-work-mode', 'pomodian-break-mode');
+        this.panelModeEl.removeClass('pomodian-work-mode', 'pomodian-break-mode', 'mode-enabled', 'mode-disabled');
+        this.pieCircleEl.removeClass('pomodian-progress-complete', 'pomodian-progress-idle');
 
         // Add appropriate mode class
         const isWorkMode = this.currentMode === TimerState.Work;
-        const modeClass = isWorkMode ? 'work-mode' : 'break-mode';
+        const modeClass = isWorkMode ? 'pomodian-work-mode' : 'pomodian-break-mode';
         this.pieCircleEl.addClass(modeClass);
         this.panelModeEl.addClass(modeClass);
 
-        // Update pie chart progress using CSS custom properties
+        // Update pie chart progress
         const radius = this.pieCircleEl.r.baseVal.value;
         const circumference = 2 * Math.PI * radius;
         
         let progress: number;
         if (timerState === TimerState.Idle) {
-            progress = 1; // Start with full circle
-            this.pieCircleEl.addClass('progress-idle');
+            progress = 1; 
+            this.pieCircleEl.addClass('pomodian-progress-idle');
         } else {
-            // Progress decreases from 1 to 0 (circle empties as time passes)
             progress = totalTime > 0 ? remainingTime / totalTime : 0;
             if (progress <= 0) {
-                this.pieCircleEl.addClass('progress-complete');
+                this.pieCircleEl.addClass('pomodian-progress-complete');
             }
         }
 
-        // Set CSS custom properties for progress calculation
         this.pieCircleEl.style.setProperty('--progress', progress.toString());
         this.pieCircleEl.style.setProperty('--circumference', circumference.toString());
 
@@ -270,10 +268,8 @@ export default class PomodoroPlugin extends Plugin {
             this.panelTimeEl.setText(`${minutes}:${seconds}`);
         }
 
-        // Update mode display
         this.panelModeEl.setText(this.getModeText());
 
-        // Update mode display state based on whether it can be changed
         if (timerState === TimerState.Idle && !this.timer.isRunning()) {
             this.panelModeEl.addClass('mode-enabled');
         } else {
@@ -305,7 +301,11 @@ export default class PomodoroPlugin extends Plugin {
         }
 
         if (this.timer.isRunning() || this.timer.getState() === TimerState.Paused) {
-            this.timer.getState() === TimerState.Paused ? this.timer.resume() : this.timer.pause();
+            if (this.timer.getState() === TimerState.Paused) {
+                this.timer.resume();
+            } else {
+                this.timer.pause();
+            }
         } else {
             this.timer.start(this.currentMode);
         }
@@ -318,7 +318,6 @@ export default class PomodoroPlugin extends Plugin {
     };
 
     private handleCycleModeClick = () => {
-        // Only allow mode change when timer is idle and reset
         if (this.timer.getState() !== TimerState.Idle || this.timer.isRunning()) {
             new Notice('Reset the timer to switch modes');
             return;
@@ -346,28 +345,19 @@ export default class PomodoroPlugin extends Plugin {
 
     private onTimerComplete() {
         this.isSessionComplete = true;
-        
-        // Play sound notification
         if (this.settings.playSound) {
             this.playNotificationSound();
         }
-
-        // Show desktop notification
         if (this.settings.showDesktopNotification) {
             this.showDesktopNotification();
         }
 
-        // Show notice
         const sessionType = this.getModeText();
         new Notice(`${sessionType} session completed!`, 4000);
 
-        // Auto-advance to next mode and start if enabled
         this.advanceToNextMode();
-        
-        // Update UI to show completion state
         this.updateUI(0, 0);
 
-        // Auto-dismiss session complete state after 10 seconds
         setTimeout(() => {
             this.acknowledgeSessionComplete();
         }, 10000);
@@ -375,7 +365,6 @@ export default class PomodoroPlugin extends Plugin {
 
     private playNotificationSound() {
         try {
-            // Use interface merging approach instead of casting to any
             interface WindowWithWebkitAudioContext extends Window {
                 webkitAudioContext?: typeof AudioContext;
             }
@@ -383,10 +372,7 @@ export default class PomodoroPlugin extends Plugin {
             const windowWithWebkit = window as WindowWithWebkitAudioContext;
             const AudioContextConstructor = window.AudioContext || windowWithWebkit.webkitAudioContext;
             
-            if (!AudioContextConstructor) {
-                console.warn('AudioContext not supported');
-                return;
-            }
+            if (!AudioContextConstructor) return;
             
             const audioContext = new AudioContextConstructor();
             const oscillator = audioContext.createOscillator();
@@ -412,17 +398,15 @@ export default class PomodoroPlugin extends Plugin {
     private showDesktopNotification() {
         if ('Notification' in window && Notification.permission === 'granted') {
             const sessionType = this.getModeText();
-            const nextSessionType = this.getNextModeText();
             
             const notification = new Notification(`Pomodian - ${sessionType} complete`, {
-                body: `Your ${sessionType.toLowerCase()} session is finished. Next: ${nextSessionType}`,
+                body: `Your ${sessionType.toLowerCase()} session is finished.`,
                 icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIHN0cm9rZT0iIzY2NiIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJ0cmFuc3BhcmVudCIvPgo8L3N2Zz4K',
                 requireInteraction: false,
                 tag: 'pomodoro-timer',
                 silent: false
             });
 
-            // Auto-close notification after 5 seconds
             setTimeout(() => {
                 notification.close();
             }, 5000);
@@ -430,26 +414,20 @@ export default class PomodoroPlugin extends Plugin {
     }
 
     private advanceToNextMode() {
-        // Calculate next mode based on completed pomodoros
         if (this.currentMode === TimerState.Work) {
             this.completedPomodoros++;
-            
-            // Check if it's time for a long break
             if (this.completedPomodoros % this.settings.longBreakInterval === 0) {
                 this.nextMode = TimerState.LongBreak;
             } else {
                 this.nextMode = TimerState.ShortBreak;
             }
         } else {
-            // After any break, go back to work
             this.nextMode = TimerState.Work;
         }
 
-        // Auto-start next session if enabled
         if ((this.currentMode === TimerState.Work && this.settings.autoStartBreaks) ||
             (this.currentMode !== TimerState.Work && this.settings.autoStartPomodoros)) {
             
-            // Start the next session automatically in the background
             setTimeout(() => {
                 if (this.isSessionComplete) {
                     this.currentMode = this.nextMode;
@@ -461,26 +439,16 @@ export default class PomodoroPlugin extends Plugin {
 
     private acknowledgeSessionComplete() {
         this.isSessionComplete = false;
-        
-        // If timer isn't already running (auto-start), switch to next mode
         if (!this.timer.isRunning()) {
             this.currentMode = this.nextMode;
         }
-        
         this.updateUI(this.timer.getRemainingTime(), this.timer.getTotalTime());
     }
 
-    private getNextModeText(): string {
-        return this.nextMode === TimerState.Work 
-            ? 'Focus' 
-            : this.nextMode === TimerState.ShortBreak 
-                ? 'Short break' 
-                : 'Long break';
-    }
+    // Removed unused getNextModeText()
 
     private onTimerCompletion(state: TimerState) {
-        // This method is called when a timer session completes
-        // The main logic is now handled in onTimerComplete()
+        // Handled in onTimerComplete
     }
 }
 
@@ -495,9 +463,7 @@ class PomodoroSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl('h2', { text: 'Pomodoro timer settings' });
         
-        // Time Settings
         new Setting(containerEl)
             .setName('Work time')
             .setDesc('Duration of focus sessions (minutes)')
@@ -546,7 +512,9 @@ class PomodoroSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings(); 
                 }));
 
-        containerEl.createEl('h3', { text: 'Auto-start settings' });
+        new Setting(containerEl)
+            .setName('Auto-start')
+            .setHeading();
         
         new Setting(containerEl)
             .setName('Auto-start breaks')
@@ -568,7 +536,9 @@ class PomodoroSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Notification settings' });
+        new Setting(containerEl)
+            .setName('Notification')
+            .setHeading();
 
         new Setting(containerEl)
             .setName('Play sound')

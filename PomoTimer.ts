@@ -1,3 +1,5 @@
+import { Plugin } from 'obsidian';
+
 export enum TimerState {
     Work,
     ShortBreak,
@@ -16,13 +18,16 @@ export class PomoTimer {
     private onStateChange: (state: TimerState) => void;
     private onTimerComplete: () => void;
     private settings: PomodoroSettings;
+    private plugin: Plugin;
 
     constructor(
+        plugin: Plugin,
         settings: PomodoroSettings, 
         onTick: (remainingTime: number, totalTime: number) => void, 
         onStateChange: (state: TimerState) => void,
         onTimerComplete: () => void
     ) {
+        this.plugin = plugin;
         this.settings = settings;
         this.onTick = onTick;
         this.onStateChange = onStateChange;
@@ -55,10 +60,11 @@ export class PomoTimer {
         }
         
         if (this.intervalId) {
-            clearInterval(this.intervalId);
+            window.clearInterval(this.intervalId);
         }
 
-        this.intervalId = window.setInterval(() => {
+        // Use plugin.registerInterval to ensure cleanup
+        this.intervalId = this.plugin.registerInterval(window.setInterval(() => {
             this.remainingTime--;
             this.onTick(this.remainingTime, this.totalTime);
             
@@ -68,14 +74,14 @@ export class PomoTimer {
                 this.onTimerComplete();
                 this.onStateChange(completedState);
             }
-        }, 1000);
+        }, 1000));
         
         this.onTick(this.remainingTime, this.totalTime);
     }
 
     pause() {
         if (this.intervalId && this.state !== TimerState.Idle && this.state !== TimerState.Paused) {
-            clearInterval(this.intervalId);
+            window.clearInterval(this.intervalId);
             this.intervalId = null;
             this.prePauseState = this.state;
             this.state = TimerState.Paused;
@@ -91,7 +97,7 @@ export class PomoTimer {
 
     stop() {
         if (this.intervalId) {
-            clearInterval(this.intervalId);
+            window.clearInterval(this.intervalId);
             this.intervalId = null;
         }
         this.state = TimerState.Idle;
@@ -102,7 +108,6 @@ export class PomoTimer {
 
     reset() {
         this.stop();
-        // Reset to show full time for current mode
         this.onTick(0, 0);
     }
 
