@@ -22,8 +22,6 @@ export default class PomodoroPlugin extends Plugin {
         await this.loadSettings();
 
         // Register the custom timer icon (SVG structure)
-        // Updated stroke-width to 4 for thicker circle
-        // Updated class names to minidoro- prefix
         addIcon('minidoro-timer', `
             <svg viewBox="0 0 20 20" class="minidoro-pie-chart">
                 <circle class="minidoro-progress-track" cx="10" cy="10" r="8" fill="transparent" stroke-width="4"></circle>
@@ -130,7 +128,7 @@ export default class PomodoroPlugin extends Plugin {
         this.containerEl.addEventListener('mouseleave', this.hidePanel);
 
         const pieButton = this.containerEl.createEl('button', { cls: 'minidoro-pie-button' });
-        pieButton.setAttribute('aria-label', 'Minidoro timer');
+        pieButton.setAttribute('aria-label', 'Pomodoro timer');
         pieButton.onclick = (event) => {
             event.stopPropagation();
             if (this.isSessionComplete) {
@@ -145,7 +143,6 @@ export default class PomodoroPlugin extends Plugin {
         setIcon(pieButton, 'minidoro-timer');
 
         // Retrieve the reference to the dynamic circle element so we can animate it
-        // Updated selector to match new class name
         this.pieCircleEl = pieButton.querySelector('.minidoro-progress-circle');
         
         parent.prepend(this.containerEl);
@@ -168,7 +165,8 @@ export default class PomodoroPlugin extends Plugin {
         
         this.panelTimeEl = this.controlPanelEl.createEl('button', { 
             cls: 'minidoro-panel-time', 
-            attr: { 'title': 'Left click: Play/pause | Right click: Reset' } 
+            // Fixed sentence case here
+            attr: { 'title': 'Left click: play/pause | Right click: reset' } 
         });
         this.panelTimeEl.onclick = () => this.handlePauseResumeClick();
         this.panelTimeEl.oncontextmenu = (e) => { 
@@ -401,7 +399,6 @@ export default class PomodoroPlugin extends Plugin {
         if ('Notification' in window && Notification.permission === 'granted') {
             const sessionType = this.getModeText();
             
-            // Updated Notification Title to Minidoro
             const notification = new Notification(`Minidoro - ${sessionType} complete`, {
                 body: `Your ${sessionType.toLowerCase()} session is finished.`,
                 icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIHN0cm9rZT0iIzY2NiIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJ0cmFuc3BhcmVudCIvPgo8L3N2Zz4K',
