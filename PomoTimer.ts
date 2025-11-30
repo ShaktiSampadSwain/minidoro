@@ -13,6 +13,7 @@ export class PomoTimer {
     private prePauseState: TimerState = TimerState.Idle;
     private remainingTime: number = 0;
     private totalTime: number = 0;
+    private targetTime: number | null = null; // New: Tracks the absolute timestamp when timer ends
     private intervalId: number | null = null;
     private onTick: (remainingTime: number, totalTime: number) => void;
     private onStateChange: (state: TimerState) => void;
@@ -43,8 +44,9 @@ export class PomoTimer {
         
         this.state = state;
 
-        // Only reset time if it's a new session
-        if (this.remainingTime === 0) {
+        // Only reset time if it's a new session (not resuming)
+        // We check <= 0 just to be safe, though usually it's exactly 0 when fresh
+        if (this.remainingTime <= 0) {
             switch (this.state) {
                 case TimerState.Work: 
                     this.remainingTime = this.settings.workTime * 60; 
@@ -59,16 +61,30 @@ export class PomoTimer {
             this.totalTime = this.remainingTime;
         }
         
+        // BACKGROUND FIX:
+        // Instead of relying on the interval to count down, we calculate the 
+        // specific timestamp when the timer should end.
+        this.targetTime = Date.now() + (this.remainingTime * 1000);
+
         if (this.intervalId) {
             window.clearInterval(this.intervalId);
         }
 
         // Use plugin.registerInterval to ensure cleanup
         this.intervalId = this.plugin.registerInterval(window.setInterval(() => {
-            this.remainingTime--;
+            if (!this.targetTime) return;
+
+            const now = Date.now();
+            // Calculate remaining seconds based on real time difference
+            // This prevents "drift" if the window is backgrounded/throttled
+            const diff = Math.ceil((this.targetTime - now) / 1000);
+            
+            this.remainingTime = diff;
             this.onTick(this.remainingTime, this.totalTime);
             
             if (this.remainingTime <= 0) {
+                // Ensure we don't show negative numbers
+                this.remainingTime = 0;
                 const completedState = this.state;
                 this.stop();
                 this.onTimerComplete();
@@ -76,6 +92,7 @@ export class PomoTimer {
             }
         }, 1000));
         
+        // Immediate update
         this.onTick(this.remainingTime, this.totalTime);
     }
 
@@ -85,12 +102,16 @@ export class PomoTimer {
             this.intervalId = null;
             this.prePauseState = this.state;
             this.state = TimerState.Paused;
+            this.targetTime = null; // Clear target time as we are no longer running
+            // this.remainingTime holds the correct value from the last tick
             this.onTick(this.remainingTime, this.totalTime);
         }
     }
 
     resume() {
         if (this.state === TimerState.Paused) {
+            // When we resume, start() will recalculate a NEW targetTime 
+            // based on the current Date.now() + the saved remainingTime
             this.start(this.prePauseState);
         }
     }
@@ -103,6 +124,7 @@ export class PomoTimer {
         this.state = TimerState.Idle;
         this.remainingTime = 0;
         this.totalTime = 0;
+        this.targetTime = null;
         this.onTick(this.remainingTime, this.totalTime);
     }
 

@@ -128,7 +128,7 @@ export default class PomodoroPlugin extends Plugin {
         this.containerEl.addEventListener('mouseleave', this.hidePanel);
 
         const pieButton = this.containerEl.createEl('button', { cls: 'minidoro-pie-button' });
-        pieButton.setAttribute('aria-label', 'Pomodoro timer');
+        pieButton.setAttribute('aria-label', 'Minidoro timer');
         pieButton.onclick = (event) => {
             event.stopPropagation();
             if (this.isSessionComplete) {
@@ -165,7 +165,6 @@ export default class PomodoroPlugin extends Plugin {
         
         this.panelTimeEl = this.controlPanelEl.createEl('button', { 
             cls: 'minidoro-panel-time', 
-            // Fixed sentence case here
             attr: { 'title': 'Left click: play/pause | Right click: reset' } 
         });
         this.panelTimeEl.onclick = () => this.handlePauseResumeClick();
