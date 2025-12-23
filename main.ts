@@ -165,7 +165,7 @@ export default class PomodoroPlugin extends Plugin {
         
         this.panelTimeEl = this.controlPanelEl.createEl('button', { 
             cls: 'minidoro-panel-time', 
-            attr: { 'title': 'Left click: play/pause | Right click: reset' } 
+            attr: { 'title': 'Left click to play or pause\nRight click to reset' }
         });
         this.panelTimeEl.onclick = () => this.handlePauseResumeClick();
         this.panelTimeEl.oncontextmenu = (e) => { 
