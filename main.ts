@@ -468,49 +468,119 @@ class PomodoroSettingTab extends PluginSettingTab {
                 text.inputEl.type = 'number';
                 text.inputEl.min = '10';
                 text.setValue(String(this.plugin.settings.timeMax));
+                // Validate on blur instead of onChange to avoid correcting mid-typing
                 text.inputEl.addEventListener('blur', async () => {
                     const value = Math.max(10, parseInt(text.inputEl.value) || 10);
                     this.plugin.settings.timeMax = value;
+                    // Clamp existing time values so they don't exceed the new max
+                    this.plugin.settings.workTime = Math.min(this.plugin.settings.workTime, value);
+                    this.plugin.settings.shortBreakTime = Math.min(this.plugin.settings.shortBreakTime, value);
+                    this.plugin.settings.longBreakTime = Math.min(this.plugin.settings.longBreakTime, value);
                     text.setValue(String(value));
+                    await this.plugin.saveSettings();
+                    // Re-render so sliders and text fields reflect the new max
+                    this.display();
+                });
+            });
+
+        // Shared references so the slider and text field can keep each other in sync
+        let workTextEl: HTMLInputElement;
+        let workSliderEl: HTMLInputElement;
+        new Setting(containerEl)
+            .setName('Work time')
+            .setDesc('Duration of focus sessions (minutes)')
+            .addSlider(slider => {
+                workSliderEl = slider.sliderEl;
+                slider
+                    .setLimits(1, this.plugin.settings.timeMax, 1)
+                    .setValue(this.plugin.settings.workTime)
+                    .setDynamicTooltip()
+                    .onChange(async (value: number) => {
+                        this.plugin.settings.workTime = value;
+                        workTextEl.value = String(value);
+                        await this.plugin.saveSettings();
+                    });
+            })
+            .addText(text => {
+                workTextEl = text.inputEl;
+                workTextEl.type = 'number';
+                workTextEl.min = '1';
+                workTextEl.value = String(this.plugin.settings.workTime);
+                // Validate on blur to avoid correcting mid-typing
+                workTextEl.addEventListener('blur', async () => {
+                    const value = Math.min(this.plugin.settings.timeMax, Math.max(1, parseInt(workTextEl.value) || 1));
+                    this.plugin.settings.workTime = value;
+                    workTextEl.value = String(value);
+                    workSliderEl.value = String(value);
+                    await this.plugin.saveSettings();
+                });
+            });
+        
+        // Shared references so the slider and text field can keep each other in sync
+        let shortTextEl: HTMLInputElement;
+        let shortSliderEl: HTMLInputElement;
+        new Setting(containerEl)
+            .setName('Short break time')
+            .setDesc('Duration of short breaks (minutes)')
+            .addSlider(slider => {
+                shortSliderEl = slider.sliderEl;
+                slider
+                    .setLimits(1, this.plugin.settings.timeMax, 1)
+                    .setValue(this.plugin.settings.shortBreakTime)
+                    .setDynamicTooltip()
+                    .onChange(async (value: number) => {
+                        this.plugin.settings.shortBreakTime = value;
+                        shortTextEl.value = String(value);
+                        await this.plugin.saveSettings();
+                    });
+            })
+            .addText(text => {
+                shortTextEl = text.inputEl;
+                shortTextEl.type = 'number';
+                shortTextEl.min = '1';
+                shortTextEl.value = String(this.plugin.settings.shortBreakTime);
+                // Validate on blur to avoid correcting mid-typing
+                shortTextEl.addEventListener('blur', async () => {
+                    const value = Math.min(this.plugin.settings.timeMax, Math.max(1, parseInt(shortTextEl.value) || 1));
+                    this.plugin.settings.shortBreakTime = value;
+                    shortTextEl.value = String(value);
+                    shortSliderEl.value = String(value);
                     await this.plugin.saveSettings();
                 });
             });
 
-        new Setting(containerEl)
-            .setName('Work time')
-            .setDesc('Duration of focus sessions (minutes)')
-            .addSlider(slider => slider
-                .setLimits(1, 60, 1)
-                .setValue(this.plugin.settings.workTime)
-                .setDynamicTooltip()
-                .onChange(async (value) => { 
-                    this.plugin.settings.workTime = value; 
-                    await this.plugin.saveSettings(); 
-                }));
-        
-        new Setting(containerEl)
-            .setName('Short break time')
-            .setDesc('Duration of short breaks (minutes)')
-            .addSlider(slider => slider
-                .setLimits(1, 30, 1)
-                .setValue(this.plugin.settings.shortBreakTime)
-                .setDynamicTooltip()
-                .onChange(async (value) => { 
-                    this.plugin.settings.shortBreakTime = value; 
-                    await this.plugin.saveSettings(); 
-                }));
-        
+        // Shared references so the slider and text field can keep each other in sync
+        let longTextEl: HTMLInputElement;
+        let longSliderEl: HTMLInputElement;
         new Setting(containerEl)
             .setName('Long break time')
             .setDesc('Duration of long breaks (minutes)')
-            .addSlider(slider => slider
-                .setLimits(1, 60, 1)
-                .setValue(this.plugin.settings.longBreakTime)
-                .setDynamicTooltip()
-                .onChange(async (value) => { 
-                    this.plugin.settings.longBreakTime = value; 
-                    await this.plugin.saveSettings(); 
-                }));
+            .addSlider(slider => {
+                longSliderEl = slider.sliderEl;
+                slider
+                    .setLimits(1, this.plugin.settings.timeMax, 1)
+                    .setValue(this.plugin.settings.longBreakTime)
+                    .setDynamicTooltip()
+                    .onChange(async (value: number) => {
+                        this.plugin.settings.longBreakTime = value;
+                        longTextEl.value = String(value);
+                        await this.plugin.saveSettings();
+                    });
+            })
+            .addText(text => {
+                longTextEl = text.inputEl;
+                longTextEl.type = 'number';
+                longTextEl.min = '1';
+                longTextEl.value = String(this.plugin.settings.longBreakTime);
+                // Validate on blur to avoid correcting mid-typing
+                longTextEl.addEventListener('blur', async () => {
+                    const value = Math.min(this.plugin.settings.timeMax, Math.max(1, parseInt(longTextEl.value) || 1));
+                    this.plugin.settings.longBreakTime = value;
+                    longTextEl.value = String(value);
+                    longSliderEl.value = String(value);
+                    await this.plugin.saveSettings();
+                });
+            });
 
         new Setting(containerEl)
             .setName('Sessions until long break')
