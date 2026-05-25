@@ -155,6 +155,7 @@ export interface PomodoroSettings {
     shortBreakTime: number;
     longBreakTime: number;
     longBreakInterval: number;
+    timeMax: number;
     autoStartBreaks: boolean;
     autoStartPomodoros: boolean;
     showDesktopNotification: boolean;
@@ -167,6 +168,7 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
     shortBreakTime: 5,
     longBreakTime: 15,
     longBreakInterval: 4,
+    timeMax: 60,
     autoStartBreaks: false,
     autoStartPomodoros: false,
     showDesktopNotification: true,

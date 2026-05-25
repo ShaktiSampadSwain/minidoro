@@ -462,6 +462,21 @@ class PomodoroSettingTab extends PluginSettingTab {
         containerEl.empty();
         
         new Setting(containerEl)
+            .setName('Maximum time')
+            .setDesc('Maximum duration for any session (minutes)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.min = '10';
+                text.setValue(String(this.plugin.settings.timeMax));
+                text.inputEl.addEventListener('blur', async () => {
+                    const value = Math.max(10, parseInt(text.inputEl.value) || 10);
+                    this.plugin.settings.timeMax = value;
+                    text.setValue(String(value));
+                    await this.plugin.saveSettings();
+                });
+            });
+
+        new Setting(containerEl)
             .setName('Work time')
             .setDesc('Duration of focus sessions (minutes)')
             .addSlider(slider => slider
